@@ -1,0 +1,30 @@
+@font-face {
+  font-family: system-ui;
+  font-style: normal;
+  font-weight: 300;
+  src: local("-apple-system"), local("Segoe UI"), local("Ubuntu"), local("Fira Sans"), local(Helvetica), local(sans-serif), local("Apple Color Emoji"), local("Segoe UI Emoji"), local("Segoe UI Symbol"); 
+}
+
+@font-face{
+    font-family: 'JetBrainsMono Regular';
+    font-weight: 300;
+    font-style: normal;
+    font-stretch: normal;
+    src: url('../fonts/JetBrainsMono-Regular.woff2') format('woff2');
+}
+
+@font-face{
+    font-family: 'JetBrainsMono Light';
+    font-weight: 200;
+    font-style: normal;
+    font-stretch: normal;
+    src: url('../fonts/JetBrainsMono-Light.woff2') format('woff2');
+}
+
+@font-face{
+    font-family: 'JetBrainsMono Medium';
+    font-weight: 400;
+    font-style: normal;
+    font-stretch: normal;
+    src: url('../fonts/JetBrainsMono-Medium.woff2') format('woff2');
+}
