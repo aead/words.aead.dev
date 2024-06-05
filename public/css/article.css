@@ -1,0 +1,70 @@
+.main {
+  position: relative;
+  margin: 0 auto;
+  padding: 20px;
+  background: #ececec;
+}
+
+.article {
+  text-align: center;
+  font-family: 'system-ui'; 
+}
+.article a {
+  color: black;
+}
+.header {
+  padding: 20px;
+  margin: auto;
+  text-align: center;
+}
+.header h2 {
+  font-size: 150%;
+  font-family: 'JetBrainsMono Medium'; 
+}
+.header p {
+  font-family: 'JetBrainsMono Regular'; 
+  font-size: 90%;
+}
+.header a:link, a:visited {
+  text-decoration: none;
+}
+.header a:hover {
+  text-decoration: underline;
+}
+@media only screen and (max-width: 959px) { .header h2 { font-size: 150%; } }
+@media only screen and (max-width: 640px) { .header h2 { font-size: 120%; } }
+
+.content {
+  display: inline-block;
+  text-align: justify;
+  text-justify: inter-word;
+  width: 900px;
+}
+.content p {
+  line-height: 140%;
+}
+
+.section {
+  padding-top: 0.7em;
+}
+.section a:link, a:visited {
+  text-decoration: none;
+}
+.section a:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: 'JetBrainsMono Light'; 
+  font-size: 90%;
+}
+
+pre {
+  padding-left: 2em;
+  overflow-x: auto;
+}
+
+@media only screen and (min-width: 768px) and (max-width: 959px) { .content { width: 708px; } }
+@media only screen and (min-width: 640px) and (max-width: 767px) { .content { width: 580px; } }
+@media only screen and (min-width: 480px) and (max-width: 639px) { .content { width: 420px; pre { white-space: pre-line; } } }
+@media only screen and (max-width: 479px) { .content { width: 300px; }  pre { padding-left: 0em; } }
