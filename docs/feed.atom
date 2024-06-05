@@ -1,19 +1,222 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>words.aead.dev</title>
-  <id>tag:words.aead.dev,2023:words.aead.dev</id>
+  <title>Andreas Auernhammer</title>
+  <id>words.aead.dev</id>
   <link rel="self" href="https://words.aead.dev/feed.atom"></link>
+  <link href="https://words.aead.dev/"></link>
   <updated>2024-06-05T08:00:00+02:00</updated>
+
   <author>
     <name>Andreas Auernhammer</name>
     <uri>https://aead.dev</uri>
     <email>hi@aead.dev</email>
   </author>
+
   <entry>
     <title>Sorting Strings In Go, Fast and Slow</title>
     <id>tag:words.aead.dev,2023:words.aead.dev/sortstr</id>
-    <link rel="alternate" href="https://words.aead.dev/sortstr"></link>
-    <published>2023-11-05T04:00:00+02:00</published>
-    <updated>2024-06-05T08:00:00+02:00</updated>
+    <published>2023-11-05T00:00:00+00:00</published>
+    <updated>2024-06-05T00:00:00+00:00</updated>
+    <link rel="alternate" href="https://words.aead.dev/sortstr.html"></link>
     <summary type="text">Why slices.Sort is fast - except for strings.</summary>
+    <content type="html">
+&lt;p&gt;
+In Go 1.21, the &lt;a href=&quot;https://pkg.go.dev/slices&quot;&gt;slices&lt;/a&gt; package got added to the Go standard library.
+It provides functions for working with slices of any type. For example, the generic &lt;a href=&quot;https://pkg.go.dev/slices@go1.21.0#Sort&quot;&gt;
+&lt;code&gt;slices.Sort&lt;/code&gt;&lt;/a&gt; function is a generic sort  implementation that accepts any slice as long as the 
+slice elements can be ordered. Its type constraint &lt;code&gt;cmp.Ordered&lt;/code&gt; demands that the slice element type
+supports the operators &lt;code&gt;&amp;lt; &amp;lt;= &amp;gt;= &amp;gt;&lt;/code&gt;. Currently, such types are numbers (ints and floats),
+pointers and strings. For other types, the slices package provides the &lt;a href=&quot;https://pkg.go.dev/slices@go1.21.0#SortFunc&quot;&gt;&lt;code&gt;SortFunc&lt;/code&gt;&lt;/a&gt;
+function which also sorts the elements but takes an explicit comparison function as second argument. So far, this
+seems like a classic example for standard library functionality.
+&lt;/p&gt;
+
+&lt;p&gt;        
+However, the Go standard library, since version 1.0, also contains the &lt;a href=&quot;https://pkg.go.dev/sort&quot;&gt;sort&lt;/a&gt;
+package. As its name indicates, it provides functions for sorting slices. Its interface, however, differs from the
+slices package since Go did not support generics back then. Before Go 1.21, most people used functions like &lt;code&gt;sort.Slice&lt;/code&gt;
+or &lt;code&gt;sort.Strings&lt;/code&gt; to sort items. Only recently, people have started using the newer slices package. Since the
+Go standard library now provides two packages for sorting, one might wonder which one to choose. According to
+the &lt;code&gt;sort.Strings&lt;/code&gt; &lt;a href=&quot;https://pkg.go.dev/sort@go1.21.0#Strings&quot;&gt;documentation&lt;/a&gt;: 
+&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;// Strings sorts a slice of strings in increasing order.
+//
+// Note: consider using the newer slices.Sort function,
+// which runs faster.
+func Strings(x []string)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3 id=&quot;1&quot;, class=&quot;section&quot;&gt;&lt;a href=&quot;#1&quot;&gt;How Sorting Works in Go&lt;/a&gt;&lt;/h3&gt;
+
+&lt;p&gt;
+Both, the sort and slices package, use the same &lt;a href=&quot;https://arxiv.org/pdf/2106.05123&quot;&gt;pattern-defeating quicksort&lt;/a&gt; (pdqsort)
+implementation. They differ only slightly in how values are compared and paritioned. On a high level:
+&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;pdqsort:
+   1. If data is small, use &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/slices/zsortordered.go;l=74-77&quot;&gt;insertion sort&lt;/a&gt;. Return.
+   2. If there are no good pivot elements, fallback to &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/slices/zsortordered.go;l=80-83&quot;&gt;heap sort&lt;/a&gt;. Return.
+   3. &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/slices/zsortordered.go;l=91-117&quot;&gt;Pick&lt;/a&gt; a pivot element and partition the slice.
+   4. Call pdqsort for the &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/slices/zsortordered.go;l=121-124&quot;&gt;left&lt;/a&gt; and &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/slices/zsortordered.go;l=125-128&quot;&gt;right&lt;/a&gt; partition.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;
+It is basically textbook quicksort with some extra functionality. Textbook quicksort may require &lt;code&gt;O(n&lt;sup&gt;&lt;code&gt;2&lt;/code&gt;&lt;/sup&gt;)&lt;/code&gt;
+operations in certain cases while pattern-defeating quicksort falls back to a &lt;code&gt;O(N * log(N))&lt;/code&gt; sorting algorithm when it runs into
+such a worst case.
+&lt;/p&gt;
+&lt;p&gt;
+Even though both packages use basically the same quicksort implementation, a &lt;a href=&quot;https://go.dev/play/p/yYRp0syHj3u&quot;&gt;benchmark&lt;/a&gt;
+sorting 10k integers shows a significant performance difference:
+&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;goos: darwin
+goarch: arm64
+pkg: github.com/aead/bench
+BenchmarkSlicesSort_Int-8           6771            176058 ns/op
+BenchmarkSort_Ints-8                2109            585427 ns/op
+PASS
+ok      github.com/aead/bench   3.829s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;
+Profiling the benchmark reveals that the partition and insertion steps in the sort package are noticably slower.
+The slices package uses direct assignments when swapping elements and the compiler is able to optimize the
+&lt;code&gt;cmp.Less&lt;/code&gt; calls for comparing two numbers into a single instruction while the sort package is tied
+to the &lt;code&gt;Less&lt;/code&gt; and &lt;code&gt;Swap&lt;/code&gt; methods of the &lt;code&gt;&lt;a href=&quot;https://pkg.go.dev/sort@go1.21.0#Interface&quot;&gt;sort.Interface&lt;/a&gt;&lt;/code&gt; type.
+When replacing the call to &lt;code&gt;slices.Sort&lt;/code&gt; with &lt;code&gt;slices.SortFunc&lt;/code&gt; and a custom comparison
+function &lt;code&gt;func(a, b int) int { return a - b })&lt;/code&gt; the performance difference becomes much smaller.
+&lt;/p&gt;
+
+&lt;p&gt;
+The compiler is able to optimize the generic &lt;code&gt;slices.Sort&lt;/code&gt; much better since it has more information
+about the types. In particular, it knows how to compare two numbers. For the &lt;code&gt;sort.Ints&lt;/code&gt;, the compiler
+could, in theory, figure out that the given &lt;code&gt;sort.Interface&lt;/code&gt; is an &lt;code&gt;[]int&lt;/code&gt;, inline the method
+calls and apply the same optimizations. It just doesn't do that. However, inlining is a trade-off and the compiler
+will not be able to infer the concrete type behind a &lt;code&gt;sort.Interface&lt;/code&gt; in many cases. 
+&lt;/p&gt;
+
+&lt;h3 id=&quot;2&quot;, class=&quot;section&quot;&gt;&lt;a href=&quot;#2&quot;&gt;Strings &lt;code&gt;!=&lt;/code&gt; Numbers&lt;/a&gt;&lt;/h3&gt;
+
+However, when running the same &lt;a href=&quot;https://go.dev/play/p/lxixxP0RMBl&quot;&gt;benchmark&lt;/a&gt; for strings the results are a bit different:
+&lt;pre&gt;&lt;code&gt;goos: darwin
+goarch: arm64
+pkg: github.com/aead/bench
+BenchmarkSlicesSort_String-8         858           1404786 ns/op
+BenchmarkSort_Strings-8             1040           1155523 ns/op
+PASS
+ok      github.com/aead/bench   2.764s
+&lt;/code&gt;&lt;/pre&gt;
+
+Even though the compiler should be able to (and does) apply the same optimizations, the &lt;code&gt;slices.Sort&lt;/code&gt;
+function is now slower than &lt;code&gt;sort.Strings&lt;/code&gt;. Replacing &lt;code&gt;slices.Sort&lt;/code&gt; with &lt;code&gt;slices.SortFunc&lt;/code&gt;
+and &lt;code&gt;cmp.Compare&lt;/code&gt; decreases performance even further:
+
+&lt;pre&gt;&lt;code&gt;goos: darwin
+goarch: arm64
+pkg: github.com/aead/bench
+BenchmarkSlicesSortFunc_Compare-8            572           2112564 ns/op
+BenchmarkSlicesSort_String-8                 865           1427147 ns/op
+BenchmarkSort_Strings-8                     1016           1161378 ns/op
+PASS
+ok      github.com/aead/bench   4.227s
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;
+This is quite surprising. How can &lt;code&gt;slices.Sort&lt;/code&gt; be faster for &lt;code&gt;[]int&lt;/code&gt; and slower
+for &lt;code&gt;[]string&lt;/code&gt;? It's not specificly optimized for one particular data type. Also, why is
+&lt;code&gt;slices.SortFunc&lt;/code&gt; using &lt;a href=&quot;https://pkg.go.dev/cmp@go1.21.0#Compare&quot;&gt;&lt;code&gt;cmp.Compare&lt;/code&gt;&lt;/a&gt;
+so much slower than the other two functions?
+&lt;/p&gt;
+
+&lt;h3 id=&quot;3&quot;, class=&quot;section&quot;&gt;&lt;a href=&quot;#3&quot;&gt;Strings &lt;code&gt;!=&lt;/code&gt; NaN&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;
+When comparing two instances of a type (x and y), &lt;code&gt;Compare&lt;/code&gt; returns, as one might expect,
+-1 if &lt;code&gt;x &amp;lt; y&lt;/code&gt;, 0 if &lt;code&gt;x == y&lt;/code&gt; and +1 if &lt;code&gt;x &amp;gt; y&lt;/code&gt;. However, there is
+one special case: What if x and/or y are &lt;a href=&quot;https://en.wikipedia.org/wiki/NaN&quot;&gt;NaN&lt;/a&gt; floating
+point numbers?
+&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;// For floating-point types, a NaN is considered less than any non-NaN,
+// a NaN is considered equal to a NaN, and -0.0 is equal to 0.0.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;
+Therefore, &lt;code&gt;Compare&lt;/code&gt; first checks whether x is a NaN by evaluating &lt;code&gt;x != x&lt;/code&gt;.
+The idea is that, according to the IEEE 754 specification, &lt;code&gt;NaN&lt;/code&gt; is not equal to any value -
+including another &lt;code&gt;NaN&lt;/code&gt;. Hence, &lt;a href=&quot;https://cs.opensource.google/go/go/+/refs/tags/go1.21.0:src/cmp/cmp.go;l=40-52&quot;&gt;&lt;code&gt;Compare&lt;/code&gt;&lt;/a&gt;
+looks like this:
+&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;func Compare[T Ordered](x, y T) int {
+	xNaN := x != x
+	yNaN := y != y
+	if xNaN &amp;&amp; yNaN {
+		return 0
+	}
+	if xNaN || x &lt; y {
+		return -1
+	}
+	if yNaN || x &gt; y {
+		return +1
+	}
+	return 0
+}&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;
+But why does all of this matter when comparing strings?
+&lt;/p&gt;
+
+&lt;h3 id=&quot;4&quot;, class=&quot;section&quot;&gt;&lt;a href=&quot;#4&quot;&gt;Things Being Equal&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;
+To generate the machine code for a &lt;code&gt;Compare&lt;/code&gt; call, the Go compiler has to determine the
+type of x and y. For example, when x and y are integers, the compiler emits a single &lt;code&gt;CMPQ&lt;/code&gt;
+instruction (on amd64) for the check &lt;code&gt;xNaN || x &amp;lt; y&lt;/code&gt;. The compiler is smart enough to
+notice that &lt;code&gt;x != x&lt;/code&gt; is always false for any value of type &lt;code&gt;int&lt;/code&gt; and eliminates
+the &lt;code&gt;xNaN&lt;/code&gt; variable entirly.
+&lt;/p&gt;
+
+&lt;p&gt;
+When x and y are strings, the compiler inserts a call to &lt;code&gt;runtime.cmpstring&lt;/code&gt;. Comparing two
+strings has linar (O(N)) runtime complexity. Therefore comparing strings is usually slower than comparing
+integers. However, the main difference is that the compiler does not recognize that &lt;code&gt;x != x&lt;/code&gt;
+is always false for strings. It does not apply the optimisation from above. Hence, it also inserts a call
+to &lt;code&gt;runtime.memequal&lt;/code&gt; and does not eliminate the &lt;code&gt;xNaN&lt;/code&gt; variable. This results in
+calling &lt;code&gt;runtime.memequal&lt;/code&gt; twice and &lt;code&gt;runtime.cmpstring&lt;/code&gt; either once or twice while
+an optimal implementation would compare both strings exactly once. This extra calls add up. Especially
+when comparing strings that share a common prefix, like long filesystem paths.
+&lt;/p&gt;
+
+&lt;p&gt;
+At the end of the day, this is a limitation of the Go compiler. While the compiler could recognize that
+&lt;code&gt;x != x&lt;/code&gt; is always false and eliminate the comparison, regardless whether &lt;code&gt;x&lt;/code&gt; is
+of type int or string, it applies this optimization just for integers. This is unfortunate because the
+documentation guides developers to use &lt;code&gt;slices.Sort&lt;/code&gt; which may be faster or slower depending
+on the type of your slice. 
+&lt;/p&gt;
+
+
+&lt;h3 id=&quot;5&quot;, class=&quot;section&quot;&gt;&lt;a href=&quot;#5&quot;&gt;Update&lt;/a&gt;&lt;/h3&gt;
+
+&lt;p&gt;
+In Go 1.22, this issue has been resolved - at least to some extend. In particular, &lt;a href=&quot;https://go-review.googlesource.com/c/go/+/503795&quot;&gt;CL 503795&lt;/a&gt;
+has been merged. It adds a dead code elimination optimization to the compiler. The Go 1.22 compiler is now able
+to detect that statements like &lt;code&gt;x != x&lt;/code&gt; are always false if &lt;code&gt;x&lt;/code&gt; is a string. Go 1.22 also
+changed the &lt;code&gt;sort.Strings&lt;/code&gt; and &lt;code&gt;sort.Ints&lt;/code&gt; implementation to thin wrappers around &lt;code&gt;slices.Sort&lt;/code&gt;.
+So most Go programs that sort primitive types, like strings or numbers, will use the &lt;code&gt;slices.Sort&lt;/code&gt;
+implementation automatically.
+&lt;/p&gt;
+
+&lt;p&gt;
+However, &lt;code&gt;cmp.Compare&lt;/code&gt; still compares strings twice whenever &lt;code&gt;x &amp;gt;= y&lt;/code&gt;. This will be addressed
+in Go 1.23 by &lt;a href=&quot;https://go-review.googlesource.com/c/go/+/578835&quot;&gt;CL 578835&lt;/a&gt; which will improve the performance
+of functions like &lt;a href=&quot;https://pkg.go.dev/strings#Compare&quot;&gt;&lt;code&gt;strings.Compare&lt;/code&gt;&lt;/a&gt;.
+&lt;/p&gt;
+
+&lt;p&gt;
+Thanks to these changes, sorting and comparing strings in Go will be even faster than before.
+&lt;/p&gt;
+    </content>
   </entry>
+
 </feed>
