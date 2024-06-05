@@ -1,0 +1,19 @@
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>words.aead.dev</title>
+  <id>tag:words.aead.dev,2023:words.aead.dev</id>
+  <link rel="self" href="https://words.aead.dev/feed.atom"></link>
+  <updated>2024-06-05T08:00:00+02:00</updated>
+  <author>
+    <name>Andreas Auernhammer</name>
+    <uri>https://aead.dev</uri>
+    <email>hi@aead.dev</email>
+  </author>
+  <entry>
+    <title>Sorting Strings In Go, Fast and Slow</title>
+    <id>tag:words.aead.dev,2023:words.aead.dev/sortstr</id>
+    <link rel="alternate" href="https://words.aead.dev/sortstr"></link>
+    <published>2023-11-05T04:00:00+02:00</published>
+    <updated>2024-06-05T08:00:00+02:00</updated>
+    <summary type="text">Why slices.Sort is fast - except for strings.</summary>
+  </entry>
+</feed>
