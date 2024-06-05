@@ -10,7 +10,8 @@
     font-weight: 300;
     font-style: normal;
     font-stretch: normal;
-    src: url('../fonts/JetBrainsMono-Regular.woff2') format('woff2');
+    font-display: swap;
+    src: local('JetBrainsMono-Regular'), url('../fonts/JetBrainsMono-Regular.woff2') format('woff2');
 }
 
 @font-face{
@@ -18,7 +19,8 @@
     font-weight: 200;
     font-style: normal;
     font-stretch: normal;
-    src: url('../fonts/JetBrainsMono-Light.woff2') format('woff2');
+    font-display: swap;
+    src: local('JetBrainsMono-Light'), url('../fonts/JetBrainsMono-Light.woff2') format('woff2');
 }
 
 @font-face{
@@ -26,5 +28,6 @@
     font-weight: 400;
     font-style: normal;
     font-stretch: normal;
-    src: url('../fonts/JetBrainsMono-Medium.woff2') format('woff2');
+    font-display: swap;
+    src: local('JetBrainsMono-Medium'), url('../fonts/JetBrainsMono-Medium.woff2') format('woff2');
 }
